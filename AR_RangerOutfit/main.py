@@ -1,15 +1,10 @@
 import cv2                      #opencv for webcam
-import mediapipe as mp          # mediapipe for pose detection
+import mediapipe as mp          #mediapipe for pose detection
 #import numpy as np
 
 # loading transparent pngs
 hat = cv2.imread('ranger_hat.png', cv2.IMREAD_UNCHANGED)
 vest = cv2.imread('ranger_vest.png', cv2.IMREAD_UNCHANGED)
-
-#if hat is None:
-#    raise FileNotFoundError("Could not load 'ranger_hat.png'. Make sure it's in the project folder.")
-#if vest is None:
-#    raise FileNotFoundError("Could not load 'ranger_vest.png'. Make sure it's in the project folder.")
 
 #mediapipe pose detection
 mp_pose = mp.solutions.pose
@@ -21,7 +16,7 @@ def overlay_transparent(background, overlay, x, y, scale=1):
     overlay = cv2.resize(overlay, (0, 0), fx=scale, fy=scale)
     h, w, _ = overlay.shape
 
-    #ensures the overlay stays within frame boundaries
+    #ensures overlay stays within frame boundaries
     if x + w > background.shape[1] or y + h > background.shape[0] or x < 0 or y < 0:
         return background
 
@@ -35,16 +30,14 @@ def overlay_transparent(background, overlay, x, y, scale=1):
 
     return background
 
-#open webcam (0 = default camera)
+#open webcam (0 is default camera)
 cap = cv2.VideoCapture(0)
 
 while cap.isOpened():
-    #read a frame from webcam
     ret, frame = cap.read()
     if not ret:
-        break  #if frame couldn't be read, exit loop
+        break
 
-    #flip the frame horizontally (mirror image for natural webcam feel)
     frame = cv2.flip(frame, 1)
 
     #convert the image to RGB for mediapipe
@@ -53,16 +46,15 @@ while cap.isOpened():
     #process the image to find pose landmarks
     result = pose.process(rgb)
 
-    #if pose landmarks were detected
     if result.pose_landmarks:
         landmarks = result.pose_landmarks.landmark
 
-        #detect the nose and both shoulders (key points)
+        #detect nose and shoulders
         nose = landmarks[mp_pose.PoseLandmark.NOSE]
         left_shoulder = landmarks[mp_pose.PoseLandmark.LEFT_SHOULDER]
         right_shoulder = landmarks[mp_pose.PoseLandmark.RIGHT_SHOULDER]
 
-        #get the dimensions of the frame
+        #getting the dimensions of the frame
         h, w, _ = frame.shape
 
         #convert coordinates to pixel values
@@ -73,7 +65,7 @@ while cap.isOpened():
         #estimate how wide the shoulders are (used to scale the hat and vest)
         shoulder_width = abs(right_x - left_x)
         if shoulder_width < 10:
-            continue  #kkip frame if tracking failed
+            continue
 
         #vest
         hat_scale = shoulder_width / hat.shape[1]
@@ -103,13 +95,11 @@ while cap.isOpened():
             vest_scale
         )
 
-    #show the frame in a window
     cv2.imshow("Ranger Filter", frame)
 
-    #ESC to exit
+    #press esc to exit
     if cv2.waitKey(5) & 0xFF == 27:
         break
 
-#release the webcam and close all opencv windows
 cap.release()
 cv2.destroyAllWindows()
